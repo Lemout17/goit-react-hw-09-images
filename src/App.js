@@ -1,4 +1,4 @@
-import { Component } from "react"
+import { useState, useEffect } from "react"
 import "./App.css"
 import Searchbar from "./components/Searchbar"
 import ImageGallery from "./components/ImageGallery"
@@ -7,140 +7,103 @@ import imagesApi from "./services/imagesApi"
 import Loader from "react-loader-spinner"
 import Modal from "./components/Modal"
 
-class App extends Component {
-  state = {
-    images: [],
-    currentPage: 1,
-    perPage: 12,
-    searchQuery: "",
-    isLoaded: false,
-    error: null,
-    showModal: false,
-    LargeUrl: "",
-    tag: "",
+export default function App() {
+  const [images, setImages] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState(12)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [error, setError] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [largeUrl, setLargeUrl] = useState("")
+  const [tag, setTag] = useState("")
+
+  const onChangeQuery = (query) => {
+    setSearchQuery(query)
+    setImages([])
+    setCurrentPage(1)
+    setError(null)
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, images, perPage } = this.state
-
-    if (prevState.searchQuery !== searchQuery) {
-      this.fetchImages()
-    }
-
-    if (images.length > perPage) {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: "smooth",
-      })
-    }
-  }
-
-  onChangeQuery = (query) => {
-    this.setState({
-      searchQuery: query,
-      images: [],
-      currentPage: 1,
-      error: null,
-    })
-  }
-
-  fetchImages = () => {
-    const { currentPage, searchQuery, perPage } = this.state
+  const fetchImages = async () => {
     const options = {
       searchQuery,
       currentPage,
       perPage,
     }
 
-    this.setState({
-      isLoaded: true,
-    })
+    setIsLoaded(true)
 
-    imagesApi
-      .fetchData(options)
-      .then((hits) =>
-        this.setState((prevState) => ({
-          images: [...prevState.images, ...hits],
-          currentPage: prevState.currentPage + 1,
-        }))
-      )
-      .catch((error) => this.setState({ error }))
-      .finally(() => this.setState({ isLoaded: false }))
+    try {
+      const response = await imagesApi.fetchData(options)
+
+      setImages((prevState) => [...prevState, ...response])
+      setCurrentPage((prevState) => prevState + 1)
+
+      setIsLoaded(false)
+    } catch (error) {
+      setError(error)
+    }
   }
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }))
+  useEffect(() => {
+    if (searchQuery === "") {
+      return
+    }
+
+    fetchImages()
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (images.length > perPage) {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth",
+      })
+    }
+  }, [images])
+
+  const toggleModal = () => {
+    setShowModal(!showModal)
   }
 
-  onImageClick = (e) => {
-    console.log("Кликнули по картинке")
+  const onImageClick = (e) => {
     if (e.target.nodeName !== "IMG") {
       return
     }
 
-    this.setState(
-      {
-        largeUrl: e.target.dataset.url,
-        tags: e.target.alt,
-      },
-      () => console.log(this.state.tags)
-    )
+    setLargeUrl(e.target.dataset.url)
+    setTag(e.target.alt)
 
-    this.toggleModal()
+    toggleModal()
   }
 
-  render() {
-    const {
-      isLoaded,
-      images,
-      error,
-      showModal,
-      largeUrl,
-      tag,
-    } = this.state
+  const shouldRenderMoreButton = images.length > 0 && !isLoaded
 
-    const shouldRenderMoreButton =
-      images.length > 0 && !isLoaded
+  return (
+    <div className="container">
+      <Searchbar onSubmit={onChangeQuery} />
 
-    return (
-      <div className="container">
-        <Searchbar onSubmit={this.onChangeQuery} />
+      {error && (
+        <h2>
+          Sorry something went wrong, try again later!(
+          {error.message})
+        </h2>
+      )}
 
-        {error && (
-          <h2>
-            Sorry something went wrong, try again later!(
-            {error.message})
-          </h2>
-        )}
+      <ImageGallery images={images} onClick={onImageClick} />
 
-        <ImageGallery
-          images={images}
-          onClick={this.onImageClick}
-        />
+      {isLoaded && (
+        <Loader type="Audio" color="#00BFFF" height={80} width={80} />
+      )}
 
-        {isLoaded && (
-          <Loader
-            type="Audio"
-            color="#00BFFF"
-            height={80}
-            width={80}
-          />
-        )}
+      {shouldRenderMoreButton && <Button onClick={fetchImages} />}
 
-        {shouldRenderMoreButton && (
-          <Button onClick={this.fetchImages} />
-        )}
-
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <img src={largeUrl} alt={tag} />
-          </Modal>
-        )}
-      </div>
-    )
-  }
+      {showModal && (
+        <Modal onClose={toggleModal}>
+          <img src={largeUrl} alt={tag} />
+        </Modal>
+      )}
+    </div>
+  )
 }
-
-export default App
