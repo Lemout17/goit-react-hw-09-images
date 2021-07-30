@@ -72,10 +72,15 @@ export default function App() {
       return
     }
 
+    setIsLoaded(true)
     setLargeUrl(e.target.dataset.url)
     setTag(e.target.alt)
 
     toggleModal()
+  }
+
+  const toggleLoader = () => {
+    setIsLoaded(false)
   }
 
   const shouldRenderMoreButton = images.length > 0 && !isLoaded
@@ -101,7 +106,10 @@ export default function App() {
 
       {showModal && (
         <Modal onClose={toggleModal}>
-          <img src={largeUrl} alt={tag} />
+          {isLoaded && (
+            <Loader type="Audio" color="#00BFFF" height={80} width={80} />
+          )}
+          <img src={largeUrl} alt={tag} onLoad={toggleLoader} />
         </Modal>
       )}
     </div>
