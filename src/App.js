@@ -25,34 +25,33 @@ export default function App() {
     setError(null)
   }
 
-  const fetchImages = async () => {
-    const options = {
-      searchQuery,
-      currentPage,
-      perPage,
-    }
-
-    setIsLoaded(true)
-
-    try {
-      const response = await imagesApi.fetchData(options)
-
-      setImages((prevState) => [...prevState, ...response])
-      setCurrentPage((prevState) => prevState + 1)
-
-      setIsLoaded(false)
-    } catch (error) {
-      setError(error)
-    }
-  }
-
   useEffect(() => {
-    if (searchQuery === "") {
+    if (!searchQuery) {
       return
     }
 
+    const fetchImages = async () => {
+      const options = {
+        searchQuery,
+        currentPage,
+        perPage,
+      }
+
+      setIsLoaded(true)
+
+      try {
+        const response = await imagesApi.fetchData(options)
+
+        setImages((prevState) => [...prevState, ...response])
+
+        setIsLoaded(false)
+      } catch (error) {
+        setError(error)
+      }
+    }
+
     fetchImages()
-  }, [searchQuery])
+  }, [currentPage, perPage, searchQuery])
 
   useEffect(() => {
     if (images.length > perPage) {
@@ -61,7 +60,9 @@ export default function App() {
         behavior: "smooth",
       })
     }
-  }, [images])
+  }, [images, perPage])
+
+  const nextPage = () => setCurrentPage((prevState) => prevState + 1)
 
   const toggleModal = () => {
     setShowModal(!showModal)
@@ -102,7 +103,7 @@ export default function App() {
         <Loader type="Audio" color="#00BFFF" height={80} width={80} />
       )}
 
-      {shouldRenderMoreButton && <Button onClick={fetchImages} />}
+      {shouldRenderMoreButton && <Button onClick={nextPage} />}
 
       {showModal && (
         <Modal onClose={toggleModal}>
